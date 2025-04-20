@@ -1,42 +1,43 @@
-import os
-from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, ContextTypes,CallbackQueryHandler
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from datetime import datetime
-from supabase import create_client
+from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler, ContextTypes,CallbackQueryHandler, MessageHandler, ConversationHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, Bot
+from datetime import datetime, time
+from register import conv_handler
+from birthday import wish_birthdays
+from config import supabase, TELEGRAM_KEY
+from pytz import timezone
 
-# Load environment variables
-load_dotenv()
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-TELEGRAM_KEY = os.getenv("TELEGRAM_KEY")
-
-
-# Connect to Supabase
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+sgtz = timezone('Asia/Singapore')
+job_time = sgtz.localize(datetime.combine(datetime.today(), time(13, 30)))
 
 # Command to start the bot
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await log_chat_id(update,context)
-    await update.message.reply_text("Welcome! Use /setbirthday <DD-MM-YYYY> to set your birthday.")
+    await update.message.reply_text("Initiliazed Chat! I am Chutzpahty, your friendly bot! I was created to handle Administrative tasks so don't mind me!")
 
 # Command to log chat id
 async def log_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     chat_title = update.effective_chat.title  # Get chat title or default to "Private Chat"
-
     # Log the chat ID
     print(f"Chat ID: {chat_id}, Title: {chat_title}")
-
-    if chat_title:
+    
+    response = supabase.table("chats").select("*").eq("chat_id", chat_id).execute()
+    if response.data:  # If chat_id exists
+        # Update the name for the existing chat_id
+        update_response = supabase.table("chats").update({"chat_title": chat_title}).eq("chat_id", chat_id).execute()
+        
+        if update_response.data:{
+            print(f"Chat ID {chat_id} updated successfully!") 
+        }
+        
+    elif chat_title:
         # Insert or update the chat ID in Supabase
         try:
             response = supabase.table("chats").upsert({
                 "chat_id": chat_id,
                 "chat_title": chat_title
-            }).execute()
+            },on_conflict=["chat_id"]).execute()
 
             if not response.error:
                 await update.message.reply_text(f"Chat ID {chat_id} has been logged successfully!")
@@ -44,6 +45,8 @@ async def log_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 await update.message.reply_text(f"Failed to log chat ID: {response.data}")
         except Exception as e:
             await update.message.reply_text(f"An error occurred: {e}")
+            
+    
 
 # Command to fetch chat IDs from Supabase and display as a selectable list
 async def select_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -78,102 +81,91 @@ async def handle_chat_selection(update: Update, context: ContextTypes.DEFAULT_TY
     
     context.user_data["selected_chat_id"] = selected_chat_id
     await query.edit_message_text(f"You selected chat ID: {selected_chat_id}")
-    
-# Command to set birthday
-async def set_birthday(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+async def update_chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    bot = Bot(TELEGRAM_KEY)
     try:
-        user_id = update.message.from_user.id
-        name = update.message.from_user.first_name
-        username = update.message.from_user.username
-        birthday = context.args[0]
-    
-        chat_id = context.user_data.get("selected_chat_id")
-
-        if not chat_id:
-            await update.message.reply_text("Please select a chat first using /selectchat.")
+        # Fetch all chat IDs from Supabase
+        response = supabase.table("chats").select("chat_id").execute()
+        if not response.data:
+            print("No chats found in the database.")
             return
+
+        # Iterate through each chat_id and update the chat_title
+        for chat in response.data:
+            chat_id = chat["chat_id"]
+            try:
+                # Get chat details from Telegram
+                chat_details = await bot.get_chat(chat_id)
+                chat_title = chat_details.title
+
+                # Update the chat_title in Supabase
+                supabase.table("chats").update({"chat_title": chat_title}).eq("chat_id", chat_id).execute()
+                print(f"Updated chat_title for chat_id {chat_id}: {chat_title}")
+            except Exception as e:
+                print(f"Failed to fetch or update chat_id {chat_id}: {e}")
+                
+        await update.message.reply_text("Chats have been updated successfully!")
+
+    except Exception as e:
+        print(f"Error fetching chats from Supabase: {e}")
         
+async def new_member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    print("new_member_handler triggered")
+    chat_title = update.message.chat.title
+    print(chat_title)
+    bot_id = context.bot.id
+    for member in update.message.new_chat_members:
         
-        datetime.strptime(birthday, '%d-%m-%Y')  # Validate date format
-
-        # Insert or update birthday in Supabase
-        response = supabase.table("birthdays").upsert({
-            "user_id": user_id,
-            "name": name,
-            "username": username,
-            "birthday": birthday,
-            "chat_id": chat_id
-        }).execute()
-        if response.status_code == 200:
-            await update.message.reply_text(f"Birthday set for {name} in chat ID {chat_id}.")
-        else:
-            await update.message.reply_text("Failed to set birthday. Please try again.")
-        await update.message.reply_text(f"Your birthday has been set to {birthday}.")
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please use the format: /setbirthday <DD-MM-YYYY>")
-
-# Function to check birthdays and send wishes
-async def check_birthdays(update:Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    
-    todayMD = datetime.now().strftime("%m-%d")
-    response = supabase.rpc("get_birthdays_today", {"today_md": todayMD}).execute()
-    for record in response.data:
-        print(record['username'])
-        await context.bot.send_message(chat_id=record["chat_id"], text=f"Happy Birthday, {record['username']}! 🎉")
-
-
-async def command_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    keyboard = [
-        [InlineKeyboardButton("Start", callback_data="start")],
-        [InlineKeyboardButton("Set Birthday", callback_data="setbirthday")],
-        [InlineKeyboardButton("Check Birthdays", callback_data="checkbirthdays")],
-        [InlineKeyboardButton("Select Chat", callback_data="selectchat")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Select a command:", reply_markup=reply_markup)
-
-# Callback handler to execute the selected command
-async def handle_menu_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    await query.answer()
-
-    # Execute the corresponding command based on the callback data
-    command = query.data
-    if command == "start":
-        await start(update, context)
-    elif command == "setbirthday":
-        await update.callback_query.message.reply_text("Use /setbirthday YYYY-MM-DD to set your birthday.")
-    elif command == "checkbirthdays":
-        await check_birthdays(update, context)
-    elif command == "selectchat":
-        await select_chat(update, context)
+        if member.id == bot_id:
+            continue
+        try:
+            await context.bot.send_message(
+                chat_id= update.message.chat.id,
+                text=(
+                    f"Hi {member.full_name}! Welcome to {chat_title}! "
+                    "Help us get to know you better by registering! Just open a chat with me and /register to start!"
+                )
+            )
+        
+        except Exception as e:
+            # Handle cases where the bot cannot message the user (e.g., privacy settings)
+            print(f"Error sending message: {e}")
 
 # Main function to run the bot
 def main():
     # Create the application with JobQueue enabled
     application = Application.builder().token(TELEGRAM_KEY).build()
 
+    
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("setbirthday", set_birthday))
-    application.add_handler(CommandHandler("checkbirthday", check_birthdays))
+    application.add_handler(CommandHandler("wishbirthdays", wish_birthdays))
     application.add_handler(CommandHandler("selectChat", select_chat))
-    application.add_handler(CommandHandler("menu", command_menu))  
-    application.add_handler(CallbackQueryHandler(handle_menu_selection))
+    application.add_handler(CommandHandler("updatechat", update_chats))
+    application.add_handler(CommandHandler("logchatid", log_chat_id))
+    application.add_handler(ChatMemberHandler(new_member_handler, ChatMemberHandler.CHAT_MEMBER))
+    application.add_handler(conv_handler)
+    
+    job_queue = application.job_queue  # Access the JobQueue
+    
+    job_queue.run_daily(
+        update_chats,
+        time=job_time.time()
+    )
 
     # Schedule daily birthday checks
     response = supabase.table("chats").select("chat_id").execute()
-
     if not response.data:
         print(f"Error fetching chat IDs")
     else:
-        job_queue = application.job_queue  # Access the JobQueue
-
         # Schedule a daily job for each chat_id
         job_queue.run_daily(
-            check_birthdays,
-            time=datetime.strptime("08:00", "%H:%M").time()
-        )
+            wish_birthdays,
+            time=job_time.time()
+        )  
+        
+    
 
     # Start the bot
     application.run_polling()
