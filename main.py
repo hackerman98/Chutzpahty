@@ -3,6 +3,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHa
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, Bot
 from datetime import datetime, time
 from register import conv_handler
+from sendPoll import send_poll_conv_handler
 from birthday import wish_birthdays
 from config import supabase, TELEGRAM_KEY
 from pytz import timezone
@@ -146,6 +147,7 @@ def main():
     application.add_handler(CommandHandler("logchatid", log_chat_id))
     application.add_handler(ChatMemberHandler(new_member_handler, ChatMemberHandler.CHAT_MEMBER))
     application.add_handler(conv_handler)
+    application.add_handler(send_poll_conv_handler)
     
     job_queue = application.job_queue  # Access the JobQueue
     
