@@ -25,11 +25,38 @@
             background-color: var(--tg-theme-button-color, #0088cc);
             border-color: var(--tg-theme-button-color, #0088cc);
         }
+        #access-denied {
+            display: none;
+            text-align: center;
+            padding: 50px 20px;
+        }
+        #loading {
+            text-align: center;
+            padding: 50px 20px;
+        }
     </style>
 </head>
 <body>
-    <div class="form-container">
+    <!-- Loading State -->
+    <div id="loading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3">Verifying access...</p>
+    </div>
+
+    <!-- Access Denied Message -->
+    <div id="access-denied">
+        <h2>⛔ Access Denied</h2>
+        <p class="text-muted">This page can only be accessed through the Telegram bot.</p>
+        <p>Please open this form from within Telegram.</p>
+    </div>
+
+    <!-- Main Form (hidden initially) -->
+    <div class="form-container" id="main-form" style="display: none;">
         <h2 class="mb-4">Contact Form</h2>
+        
+        <div class="alert alert-info" id="user-info"></div>
         
         <form id="contactForm">
             <div class="mb-3">
@@ -38,25 +65,18 @@
             </div>
             
             <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="email" required>
-            </div>
-            
-            <div class="mb-3">
                 <label for="phone" class="form-label">Phone</label>
                 <input type="tel" class="form-control" id="phone">
             </div>
             
             <div class="mb-3">
-                <label for="message" class="form-label">Message</label>
-                <textarea class="form-control" id="message" rows="4" required></textarea>
+                <label for="birthday" class="form-label">Birthday</label>
+                <input type="date" class="form-control" id="birthday">
             </div>
             
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="subscribe">
-                <label class="form-check-label" for="subscribe">
-                    Subscribe to newsletter
-                </label>
+            <div class="mb-3">
+                <label for="funfact" class="form-label">Let us know a fun fact about you!</label>
+                <textarea class="form-control" id="funfact" rows="3" required></textarea>
             </div>
             
             <button type="submit" class="btn btn-primary w-100">Submit</button>
@@ -71,14 +91,74 @@
     <script>
         // Initialize Telegram Web App
         let tg = window.Telegram.WebApp;
-        tg.expand();
         
-        // Enable closing confirmation
-        tg.enableClosingConfirmation();
+        // Verify access is from Telegram
+        function verifyTelegramAccess() {
+            // Check if Telegram WebApp is available
+            if (!tg || !tg.initData) {
+                showAccessDenied();
+                return false;
+            }
+            
+            // Check if we have user data
+            if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+                showAccessDenied();
+                return false;
+            }
+            
+            return true;
+        }
         
-        // Show main button
-        tg.MainButton.setText('Submit Form');
-        tg.MainButton.show();
+        function showAccessDenied() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('access-denied').style.display = 'block';
+        }
+        
+        function initializeForm() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('main-form').style.display = 'block';
+            
+            // Expand to full screen
+            tg.expand();
+            
+            // Enable closing confirmation
+            tg.enableClosingConfirmation();
+            
+            // Show main button
+            tg.MainButton.setText('Submit Form');
+            tg.MainButton.show();
+            
+            // Display user info
+            const user = tg.initDataUnsafe.user;
+            document.getElementById('user-info').innerHTML = 
+                `Logged in as: <strong>${user.first_name}${user.last_name ? ' ' + user.last_name : ''}</strong>`;
+            
+            // Pre-fill name if available
+            if (user.first_name) {
+                document.getElementById('name').value = 
+                    `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
+            }
+            
+            // Pre-fill birthday if available on the user object (various possible fields)
+            if (user.birthdate) {
+                document.getElementById('birthday').value = user.birthdate;
+            } else if (user.birthday) {
+                document.getElementById('birthday').value = user.birthday;
+            } else if (user.date_of_birth) {
+                document.getElementById('birthday').value = user.date_of_birth;
+            }
+
+            // Theme the form based on Telegram theme
+            if (tg.colorScheme === 'dark') {
+                document.body.style.backgroundColor = '#1c1c1c';
+                document.body.style.color = '#ffffff';
+            }
+        }
+        
+        // Verify access on page load
+        if (verifyTelegramAccess()) {
+            initializeForm();
+        }
         
         // Handle form submission
         document.getElementById('contactForm').addEventListener('submit', function(e) {
@@ -92,15 +172,15 @@
         function submitForm() {
             const formData = {
                 name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
                 phone: document.getElementById('phone').value,
-                message: document.getElementById('message').value,
-                subscribe: document.getElementById('subscribe').checked,
-                telegram_user: tg.initDataUnsafe.user
+                birthday: document.getElementById('birthday').value,
+                fun_fact: document.getElementById('funfact').value,
+                telegram_user: tg.initDataUnsafe.user,
+                telegram_init_data: tg.initData // Include for server-side verification
             };
             
-            // Validate required fields
-            if (!formData.name || !formData.email || !formData.message) {
+            // Validate required fields (now name and fun fact)
+            if (!formData.name || !formData.fun_fact) {
                 tg.showAlert('Please fill in all required fields');
                 return;
             }
@@ -116,12 +196,6 @@
             setTimeout(() => {
                 tg.close();
             }, 1500);
-        }
-        
-        // Optional: Theme the form based on Telegram theme
-        if (tg.colorScheme === 'dark') {
-            document.body.style.backgroundColor = '#1c1c1c';
-            document.body.style.color = '#ffffff';
         }
     </script>
 </body>
