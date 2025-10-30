@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Mini App Form</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <style>
+        body {
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 20px;
+        }
+        .form-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .btn-primary {
+            background-color: var(--tg-theme-button-color, #0088cc);
+            border-color: var(--tg-theme-button-color, #0088cc);
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2 class="mb-4">Contact Form</h2>
+        
+        <form id="contactForm">
+            <div class="mb-3">
+                <label for="name" class="form-label">Name</label>
+                <input type="text" class="form-control" id="name" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="phone" class="form-label">Phone</label>
+                <input type="tel" class="form-control" id="phone">
+            </div>
+            
+            <div class="mb-3">
+                <label for="message" class="form-label">Message</label>
+                <textarea class="form-control" id="message" rows="4" required></textarea>
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="subscribe">
+                <label class="form-check-label" for="subscribe">
+                    Subscribe to newsletter
+                </label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100">Submit</button>
+        </form>
+        
+        <div id="status" class="mt-3"></div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Initialize Telegram Web App
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Enable closing confirmation
+        tg.enableClosingConfirmation();
+        
+        // Show main button
+        tg.MainButton.setText('Submit Form');
+        tg.MainButton.show();
+        
+        // Handle form submission
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitForm();
+        });
+        
+        // Also handle main button click
+        tg.MainButton.onClick(submitForm);
+        
+        function submitForm() {
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                message: document.getElementById('message').value,
+                subscribe: document.getElementById('subscribe').checked,
+                telegram_user: tg.initDataUnsafe.user
+            };
+            
+            // Validate required fields
+            if (!formData.name || !formData.email || !formData.message) {
+                tg.showAlert('Please fill in all required fields');
+                return;
+            }
+            
+            // Send data back to bot
+            tg.sendData(JSON.stringify(formData));
+            
+            // Show success message
+            document.getElementById('status').innerHTML = 
+                '<div class="alert alert-success">Form submitted successfully!</div>';
+            
+            // Close the mini app after a short delay
+            setTimeout(() => {
+                tg.close();
+            }, 1500);
+        }
+        
+        // Optional: Theme the form based on Telegram theme
+        if (tg.colorScheme === 'dark') {
+            document.body.style.backgroundColor = '#1c1c1c';
+            document.body.style.color = '#ffffff';
+        }
+    </script>
+</body>
+</html>
