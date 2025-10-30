@@ -73,11 +73,35 @@
                 <label for="birthday" class="form-label">Birthday</label>
                 <input type="date" class="form-control" id="birthday">
             </div>
+
+            <div class="mb-3">
+                <label for="course" class="form-label">What are you studying?</label>
+                <input type="date" class="form-control" id="course">
+            </div>
+
+            <div class="mb-3">
+                <label for="year" class="form-label">Current Year you are in</label>
+                <input type="date" class="form-control" id="year">
+            </div>
+
+            <div class="mb-3">
+                <label for="school" class="form-label">School</label>
+                <input type="date" class="form-control" id="school">
+            </div>
             
+            <div class="mb-3">
+                <label for="university" class="form-label">University</label>
+                <input type="date" class="form-control" id="university">
+            </div>
+
             <div class="mb-3">
                 <label for="funfact" class="form-label">Let us know a fun fact about you!</label>
                 <textarea class="form-control" id="funfact" rows="3" required></textarea>
             </div>
+            
+            <!-- Hidden fields for Telegram username and user_id -->
+            <input type="hidden" id="username" name="username">
+            <input type="hidden" id="user_id" name="user_id">
             
             <button type="submit" class="btn btn-primary w-100">Submit</button>
         </form>
@@ -148,6 +172,10 @@
                 document.getElementById('birthday').value = user.date_of_birth;
             }
 
+            // Set hidden fields for username and user_id
+            document.getElementById('username').value = user.username || '';
+            document.getElementById('user_id').value = user.id || '';
+
             // Theme the form based on Telegram theme
             if (tg.colorScheme === 'dark') {
                 document.body.style.backgroundColor = '#1c1c1c';
@@ -175,6 +203,8 @@
                 phone: document.getElementById('phone').value,
                 birthday: document.getElementById('birthday').value,
                 fun_fact: document.getElementById('funfact').value,
+                username: document.getElementById('username').value,
+                user_id: document.getElementById('user_id').value,
                 telegram_user: tg.initDataUnsafe.user,
                 telegram_init_data: tg.initData // Include for server-side verification
             };

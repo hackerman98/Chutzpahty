@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler, ContextTypes,CallbackQueryHandler, MessageHandler, ConversationHandler
+from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler, ContextTypes,CallbackQueryHandler, MessageHandler, ConversationHandler, filters
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, Bot
 from datetime import datetime, time
 from register import conv_handler
@@ -7,6 +7,7 @@ from sendPoll import send_poll_conv_handler
 from birthday import wish_birthdays
 from config import supabase, TELEGRAM_KEY
 from pytz import timezone
+from launchForm import launch, web_app_data
 
 sgtz = timezone('Asia/Singapore')
 job_time = sgtz.localize(datetime.combine(datetime.today(), time(13, 30)))
@@ -124,10 +125,10 @@ async def new_member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await context.bot.send_message(
                 chat_id= update.message.chat.id,
                 text=(
-                    f"Hi {member.full_name}! Welcome to {chat_title}! "
-                    "Help us get to know you better by registering! Just open a chat with me and /register to start!"
+                    f"Hi {member.full_name}! Welcome to {chat_title}!"
                 )
             )
+            launch
         
         except Exception as e:
             # Handle cases where the bot cannot message the user (e.g., privacy settings)
@@ -137,7 +138,6 @@ async def new_member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 def main():
     # Create the application with JobQueue enabled
     application = Application.builder().token(TELEGRAM_KEY).build()
-
     
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
@@ -146,31 +146,23 @@ def main():
     application.add_handler(CommandHandler("updatechat", update_chats))
     application.add_handler(CommandHandler("logchatid", log_chat_id))
     application.add_handler(ChatMemberHandler(new_member_handler, ChatMemberHandler.CHAT_MEMBER))
-    application.add_handler(conv_handler)
+    # application.add_handler(conv_handler)
     application.add_handler(send_poll_conv_handler)
-    
-    job_queue = application.job_queue  # Access the JobQueue
-    
-    job_queue.run_daily(
-        update_chats,
-        time=job_time.time()
-    )
 
-    # Schedule daily birthday checks
-    response = supabase.table("chats").select("chat_id").execute()
-    if not response.data:
-        print(f"Error fetching chat IDs")
-    else:
-        # Schedule a daily job for each chat_id
-        job_queue.run_daily(
-            wish_birthdays,
-            time=job_time.time()
-        )  
-        
+    application.add_handler(CommandHandler("launch", launch))
+    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
 
-    # Start the bot
+    # ✅ Now you can safely use job_queue
+    job_queue = application.job_queue
+    job_time = datetime.strptime("08:00", "%H:%M")
+
+    job_queue.run_daily(update_chats, time=job_time.time())
+    job_queue.run_daily(wish_birthdays, time=job_time.time())
+      
     application.run_polling()
+
+    
 
 if __name__ == '__main__':
     main()
