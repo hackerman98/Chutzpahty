@@ -119,16 +119,16 @@
         // Verify access is from Telegram
         function verifyTelegramAccess() {
             // Check if Telegram WebApp is available
-            if (!tg || !tg.initData) {
-                showAccessDenied();
-                return false;
-            }
+            // if (!tg || !tg.initData) {
+            //     showAccessDenied();
+            //     return false;
+            // }
             
-            // Check if we have user data
-            if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
-                showAccessDenied();
-                return false;
-            }
+            // // Check if we have user data
+            // if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+            //     showAccessDenied();
+            //     return false;
+            // }
             
             return true;
         }
