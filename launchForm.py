@@ -1,28 +1,23 @@
 import supabase
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram import KeyboardButton, ReplyKeyboardMarkup, Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import  ContextTypes
 
-async def launch(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def launch(update: Update, context):
+    keyboard = [[
+        KeyboardButton("📝 Launch Form", web_app=WebAppInfo(url="https://hackerman98.github.io/Chutzpahty/"))
+    ]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    await update.message.reply_text("Open the form:", reply_markup=reply_markup)
 
-    print("launch command triggered")
 
-    # Create a button that opens your Mini App
-    keyboard = [
-        [InlineKeyboardButton(
-            "📝 Launch Form", 
-            web_app=WebAppInfo(url="https://hackerman98.github.io/Chutzpahty/")
-        )]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(
-        "Click the button below to fill out the form for us to get to know you better:",
-        reply_markup=reply_markup
-    )
-
 # Handle data sent back from the form
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Get the data sent from your HTML form
+    print("=" * 50)
+    print("✅ WEB APP DATA HANDLER TRIGGERED!")
+    print("=" * 50)
+    
     data = update.message.web_app_data.data
     
     # Parse the JSON data

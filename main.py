@@ -49,30 +49,6 @@ async def log_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             await update.message.reply_text(f"An error occurred: {e}")
             
     
-
-# Command to fetch chat IDs from Supabase and display as a selectable list
-async def select_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        # Fetch chat IDs and titles from Supabase
-        response = supabase.table("chats").select("chat_id, chat_title").execute()
-
-        if response.data:
-            chats = response.data
-
-            # Create InlineKeyboardMarkup with chat options
-            keyboard = [
-                [InlineKeyboardButton(chat["chat_title"], callback_data=str(chat["chat_id"]))]
-                for chat in chats
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            # Send the list of chats to the user
-            await update.message.reply_text("Select a chat:", reply_markup=reply_markup)
-        else:
-            await update.message.reply_text("No chats found in the database.")
-    except Exception as e:
-        await update.message.reply_text(f"An error occurred: {e}")
-
 # Callback handler to process the selected chat
 async def handle_chat_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -142,7 +118,6 @@ def main():
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("wishbirthdays", wish_birthdays))
-    application.add_handler(CommandHandler("selectChat", select_chat))
     application.add_handler(CommandHandler("updatechat", update_chats))
     application.add_handler(CommandHandler("logchatid", log_chat_id))
     application.add_handler(ChatMemberHandler(new_member_handler, ChatMemberHandler.CHAT_MEMBER))
@@ -150,8 +125,7 @@ def main():
     application.add_handler(send_poll_conv_handler)
 
     application.add_handler(CommandHandler("launch", launch))
-    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
-    
+    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))  
 
     # ✅ Now you can safely use job_queue
     job_queue = application.job_queue
@@ -160,7 +134,7 @@ def main():
     job_queue.run_daily(update_chats, time=job_time.time())
     job_queue.run_daily(wish_birthdays, time=job_time.time())
       
-    application.run_polling()
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
     
 
