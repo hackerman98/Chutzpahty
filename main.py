@@ -121,10 +121,10 @@ def main():
     application.add_handler(CommandHandler("updatechat", update_chats))
     application.add_handler(CommandHandler("logchatid", log_chat_id))
     application.add_handler(ChatMemberHandler(new_member_handler, ChatMemberHandler.CHAT_MEMBER))
-    # application.add_handler(conv_handler)
+    #application.add_handler(conv_handler)
     application.add_handler(send_poll_conv_handler)
 
-    application.add_handler(CommandHandler("launch", launch))
+    application.add_handler(CommandHandler("register", launch))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))  
 
     # ✅ Now you can safely use job_queue
@@ -135,8 +135,6 @@ def main():
     job_queue.run_daily(wish_birthdays, time=job_time.time())
       
     application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-    
 
 if __name__ == '__main__':
     main()

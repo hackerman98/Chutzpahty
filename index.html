@@ -102,8 +102,6 @@
             <!-- Hidden fields for Telegram username and user_id -->
             <input type="hidden" id="username" name="username">
             <input type="hidden" id="user_id" name="user_id">
-            
-            <button type="submit" class="btn btn-primary w-100">Submit</button>
         </form>
         
         <div id="status" class="mt-3"></div>
@@ -115,20 +113,22 @@
     <script>
         // Initialize Telegram Web App
         let tg = window.Telegram.WebApp;
+
+        tg.ready();
         
         // Verify access is from Telegram
         function verifyTelegramAccess() {
             // Check if Telegram WebApp is available
-            // if (!tg || !tg.initData) {
-            //     showAccessDenied();
-            //     return false;
-            // }
+            if (!tg || !tg.initData) {
+                showAccessDenied();
+                return false;
+            }
             
-            // // Check if we have user data
-            // if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
-            //     showAccessDenied();
-            //     return false;
-            // }
+            // Check if we have user data
+            if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+                showAccessDenied();
+                return false;
+            }
             
             return true;
         }
@@ -187,12 +187,12 @@
         if (verifyTelegramAccess()) {
             initializeForm();
         }
-        
-        // Handle form submission
-        document.getElementById('contactForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            submitForm();
-        });
+
+        // // Handle form submission
+        // document.getElementById('contactForm').addEventListener('submit', function(e) {
+        //     e.preventDefault();
+        //     submitForm();
+        // });
         
         // Also handle main button click
         tg.MainButton.onClick(submitForm);
@@ -203,8 +203,7 @@
                 phone: document.getElementById('phone').value,
                 birthday: document.getElementById('birthday').value,
                 fun_fact: document.getElementById('funfact').value,
-                username: document.getElementById('username').value,
-                user_id: document.getElementById('user_id').value,
+                university: document.getElementById('university').value,
                 telegram_user: tg.initDataUnsafe.user,
                 telegram_init_data: tg.initData // Include for server-side verification
             };
@@ -216,6 +215,7 @@
             }
             
             // Send data back to bot
+            console.log("Sending data:", formData);
             tg.sendData(JSON.stringify(formData));
             
             // Show success message
@@ -225,7 +225,7 @@
             // Close the mini app after a short delay
             setTimeout(() => {
                 tg.close();
-            }, 1500);
+            }, 50);
         }
     </script>
 </body>

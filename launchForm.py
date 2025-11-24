@@ -2,12 +2,31 @@ import supabase
 from telegram import KeyboardButton, ReplyKeyboardMarkup, Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import  ContextTypes
 
+from telegram.constants import ChatType
+
 async def launch(update: Update, context):
-    keyboard = [[
-        KeyboardButton("📝 Launch Form", web_app=WebAppInfo(url="https://hackerman98.github.io/Chutzpahty/"))
-    ]]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Open the form:", reply_markup=reply_markup)
+    # Check if private chat
+    # if update.effective_chat.type != ChatType.PRIVATE:
+    #     bot_username = context.bot.username
+    #     keyboard = [[
+    #         InlineKeyboardButton("📝 Register Here", url=f"https://t.me/{bot_username}?start=register")
+    #     ]]
+    #     reply_markup = InlineKeyboardMarkup(keyboard)
+    #     await update.message.reply_text(
+    #         "⚠️ Registration must be done in private chat.\nClick below to start:",
+    #         reply_markup=reply_markup
+    #     )
+    #     return
+    
+    # Private chat - show web app button
+
+
+    
+    # keyboard = [[
+    #     KeyboardButton("📝 Launch Form", web_app=WebAppInfo(url="https://hackerman98.github.io/Chutzpahty/"))
+    # ]]
+    reply_markup = ReplyKeyboardMarkup.from_button(KeyboardButton("📝 Launch Form", web_app=WebAppInfo(url="https://hackerman98.github.io/Chutzpahty/")),)
+    await update.message.reply_text("Click the button to open the form:", reply_markup=reply_markup)
 
 
     
@@ -36,16 +55,18 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #     f"Fun Fact: {form_data['funfact']}"
     # )
 
+
+
+
     user_data = {
-        "user_id": form_data['user_id'],
-        "username": form_data['username'],
+        "user_id": context.user_data.get("user_id"),
+        "username": context.user_data.get("username"),
         "name": form_data['name'],
         "birthday": form_data['birthday'],
         "course": form_data['course'],
         "year": form_data['year'],
         "university": form_data['university'],
-        "group": form_data['group'],
-        "funfact": form_data['funfact'],
+        "funfact": form_data['fun_fact'],
         "chat_id": update.effective_chat.id
     }
 
