@@ -119,7 +119,7 @@
         // Verify access is from Telegram
         function verifyTelegramAccess() {
             // Check if Telegram WebApp is available
-            if (!tg || !tg.initData) {
+            if (!tg) {
                 showAccessDenied();
                 return false;
             }
